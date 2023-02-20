@@ -26,7 +26,7 @@ cfg = __C
 # for gpu allocation
 __C.GPU_AVAILABLE = '0'
 __C.GPU_USE_COUNT = len(__C.GPU_AVAILABLE.split(','))
-__C.GPU_MEMORY_FRACTION = 0.2
+__C.GPU_MEMORY_FRACTION = 1
 
 # selected object
 __C.DETECT_OBJ = 'Car'  # Pedestrian/Cyclist
