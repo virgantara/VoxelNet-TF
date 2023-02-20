@@ -137,6 +137,8 @@ def main(_):
                 model.saver.save(sess, os.path.join(
                     save_model_dir, 'checkpoint'), global_step=model.global_step)
 
+                print('Finished')
+
 
 if __name__ == '__main__':
     tf.app.run(main)
