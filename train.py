@@ -31,7 +31,7 @@ parser.add_argument('-l', '--lr', type=float, nargs='?', default=0.001,
                     help='set learning rate')
 args = parser.parse_args()
 
-dataset_dir = './data/object'
+dataset_dir = '../data/object'
 log_dir = os.path.join('./log', args.tag)
 save_model_dir = os.path.join('./save_model', args.tag)
 os.makedirs(log_dir, exist_ok=True)

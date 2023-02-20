@@ -7,7 +7,7 @@
 # Last Modified : Thu 08 Mar 2018 02:20:43 PM CST
 # Created By : Jialin Zhao
 
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
 import numpy as np
 
 from config import cfg
@@ -22,20 +22,20 @@ class MiddleAndRPN:
         self.input = input
         self.training = training
         # groundtruth(target) - each anchor box, represent as △x, △y, △z, △l, △w, △h, rotation
-        self.targets = tf.placeholder(
-            tf.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 14])
+        self.targets = tf.compat.v1.placeholder(
+            tf.compat.v1.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 14])
         # postive anchors equal to one and others equal to zero(2 anchors in 1 position)
-        self.pos_equal_one = tf.placeholder(
-            tf.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 2])
-        self.pos_equal_one_sum = tf.placeholder(tf.float32, [None, 1, 1, 1])
-        self.pos_equal_one_for_reg = tf.placeholder(
-            tf.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 14])
+        self.pos_equal_one = tf.compat.v1.placeholder(
+            tf.compat.v1.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 2])
+        self.pos_equal_one_sum = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, 1, 1, 1])
+        self.pos_equal_one_for_reg = tf.compat.v1.placeholder(
+            tf.compat.v1.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 14])
         # negative anchors equal to one and others equal to zero
-        self.neg_equal_one = tf.placeholder(
-            tf.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 2])
-        self.neg_equal_one_sum = tf.placeholder(tf.float32, [None, 1, 1, 1])
+        self.neg_equal_one = tf.compat.v1.placeholder(
+            tf.compat.v1.float32, [None, cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH, 2])
+        self.neg_equal_one_sum = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, 1, 1, 1])
 
-        with tf.variable_scope('MiddleAndRPN_' + name):
+        with tf.compat.v1.variable_scope('MiddleAndRPN_' + name):
             # convolutinal middle layers
             temp_conv = ConvMD(3, 128, 64, 3, (2, 1, 1),
                                (1, 1, 1), self.input, name='conv1')
@@ -43,8 +43,8 @@ class MiddleAndRPN:
                                (0, 1, 1), temp_conv, name='conv2')
             temp_conv = ConvMD(3, 64, 64, 3, (2, 1, 1),
                                (1, 1, 1), temp_conv, name='conv3')
-            temp_conv = tf.transpose(temp_conv, perm=[0, 2, 3, 4, 1])
-            temp_conv = tf.reshape(
+            temp_conv = tf.compat.v1.transpose(temp_conv, perm=[0, 2, 3, 4, 1])
+            temp_conv = tf.compat.v1.reshape(
                 temp_conv, [-1, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 128])
 
             # rpn
@@ -93,7 +93,7 @@ class MiddleAndRPN:
                                temp_conv, training=self.training, name='deconv3')
 
             # final:
-            temp_conv = tf.concat([deconv3, deconv2, deconv1], -1)
+            temp_conv = tf.compat.v1.concat([deconv3, deconv2, deconv1], -1)
             # Probability score map, scale = [None, 200/100, 176/120, 2]
             p_map = ConvMD(2, 768, 2, 1, (1, 1), (0, 0), temp_conv, activation=False,
                            training=self.training, name='conv20')
@@ -101,19 +101,19 @@ class MiddleAndRPN:
             r_map = ConvMD(2, 768, 14, 1, (1, 1), (0, 0),
                            temp_conv, training=self.training, activation=False, name='conv21')
             # softmax output for positive anchor and negative anchor, scale = [None, 200/100, 176/120, 1]
-            self.p_pos = tf.sigmoid(p_map)
+            self.p_pos = tf.compat.v1.sigmoid(p_map)
             self.output_shape = [cfg.FEATURE_HEIGHT, cfg.FEATURE_WIDTH]
 
-            self.cls_loss = alpha * (-self.pos_equal_one * tf.log(self.p_pos + small_addon_for_BCE)) / self.pos_equal_one_sum \
-                + beta * (-self.neg_equal_one * tf.log(1 - self.p_pos +
+            self.cls_loss = alpha * (-self.pos_equal_one * tf.compat.v1.log(self.p_pos + small_addon_for_BCE)) / self.pos_equal_one_sum \
+                + beta * (-self.neg_equal_one * tf.compat.v1.log(1 - self.p_pos +
                                                        small_addon_for_BCE)) / self.neg_equal_one_sum
-            self.cls_loss = tf.reduce_sum(self.cls_loss)
+            self.cls_loss = tf.compat.v1.reduce_sum(self.cls_loss)
 
             self.reg_loss = smooth_l1(r_map * self.pos_equal_one_for_reg, self.targets *
                                       self.pos_equal_one_for_reg, sigma) / self.pos_equal_one_sum
-            self.reg_loss = tf.reduce_sum(self.reg_loss)
+            self.reg_loss = tf.compat.v1.reduce_sum(self.reg_loss)
 
-            self.loss = tf.reduce_sum(self.cls_loss + self.reg_loss)
+            self.loss = tf.compat.v1.reduce_sum(self.cls_loss + self.reg_loss)
 
             self.delta_output = r_map
             self.prob_output = self.p_pos
@@ -121,13 +121,13 @@ class MiddleAndRPN:
 
 def smooth_l1(deltas, targets, sigma=3.0):
     sigma2 = sigma * sigma
-    diffs = tf.subtract(deltas, targets)
-    smooth_l1_signs = tf.cast(tf.less(tf.abs(diffs), 1.0 / sigma2), tf.float32)
+    diffs = tf.compat.v1.subtract(deltas, targets)
+    smooth_l1_signs = tf.compat.v1.cast(tf.compat.v1.less(tf.compat.v1.abs(diffs), 1.0 / sigma2), tf.compat.v1.float32)
 
-    smooth_l1_option1 = tf.multiply(diffs, diffs) * 0.5 * sigma2
-    smooth_l1_option2 = tf.abs(diffs) - 0.5 / sigma2
-    smooth_l1_add = tf.multiply(smooth_l1_option1, smooth_l1_signs) + \
-        tf.multiply(smooth_l1_option2, 1 - smooth_l1_signs)
+    smooth_l1_option1 = tf.compat.v1.multiply(diffs, diffs) * 0.5 * sigma2
+    smooth_l1_option2 = tf.compat.v1.abs(diffs) - 0.5 / sigma2
+    smooth_l1_add = tf.compat.v1.multiply(smooth_l1_option1, smooth_l1_signs) + \
+        tf.compat.v1.multiply(smooth_l1_option2, 1 - smooth_l1_signs)
     smooth_l1 = smooth_l1_add
 
     return smooth_l1
@@ -136,21 +136,21 @@ def smooth_l1(deltas, targets, sigma=3.0):
 def ConvMD(M, Cin, Cout, k, s, p, input, training=True, activation=True, name='conv'):
     temp_p = np.array(p)
     temp_p = np.lib.pad(temp_p, (1, 1), 'constant', constant_values=(0, 0))
-    with tf.variable_scope(name) as scope:
+    with tf.compat.v1.variable_scope(name) as scope:
         if(M == 2):
             paddings = (np.array(temp_p)).repeat(2).reshape(4, 2)
-            pad = tf.pad(input, paddings, "CONSTANT")
-            temp_conv = tf.layers.conv2d(
-                pad, Cout, k, strides=s, padding="valid", reuse=tf.AUTO_REUSE, name=scope)
+            pad = tf.compat.v1.pad(input, paddings, "CONSTANT")
+            temp_conv = tf.compat.v1.layers.conv2d(
+                pad, Cout, k, strides=s, padding="valid", reuse=tf.compat.v1.AUTO_REUSE, name=scope)
         if(M == 3):
             paddings = (np.array(temp_p)).repeat(2).reshape(5, 2)
-            pad = tf.pad(input, paddings, "CONSTANT")
-            temp_conv = tf.layers.conv3d(
-                pad, Cout, k, strides=s, padding="valid", reuse=tf.AUTO_REUSE, name=scope)
-        temp_conv = tf.layers.batch_normalization(
-            temp_conv, axis=-1, fused=True, training=training, reuse=tf.AUTO_REUSE, name=scope)
+            pad = tf.compat.v1.pad(input, paddings, "CONSTANT")
+            temp_conv = tf.compat.v1.layers.conv3d(
+                pad, Cout, k, strides=s, padding="valid", reuse=tf.compat.v1.AUTO_REUSE, name=scope)
+        temp_conv = tf.compat.v1.layers.batch_normalization(
+            temp_conv, axis=-1, fused=True, training=training, reuse=tf.compat.v1.AUTO_REUSE, name=scope)
         if activation:
-            return tf.nn.relu(temp_conv)
+            return tf.compat.v1.nn.relu(temp_conv)
         else:
             return temp_conv
 
@@ -158,15 +158,15 @@ def Deconv2D(Cin, Cout, k, s, p, input, training=True, name='deconv'):
     temp_p = np.array(p)
     temp_p = np.lib.pad(temp_p, (1, 1), 'constant', constant_values=(0, 0))
     paddings = (np.array(temp_p)).repeat(2).reshape(4, 2)
-    pad = tf.pad(input, paddings, "CONSTANT")
-    with tf.variable_scope(name) as scope:
-        temp_conv = tf.layers.conv2d_transpose(
-            pad, Cout, k, strides=s, padding="SAME", reuse=tf.AUTO_REUSE, name=scope)
-        temp_conv = tf.layers.batch_normalization(
-            temp_conv, axis=-1, fused=True, training=training, reuse=tf.AUTO_REUSE, name=scope)
-        return tf.nn.relu(temp_conv)
+    pad = tf.compat.v1.pad(input, paddings, "CONSTANT")
+    with tf.compat.v1.variable_scope(name) as scope:
+        temp_conv = tf.compat.v1.layers.conv2d_transpose(
+            pad, Cout, k, strides=s, padding="SAME", reuse=tf.compat.v1.AUTO_REUSE, name=scope)
+        temp_conv = tf.compat.v1.layers.batch_normalization(
+            temp_conv, axis=-1, fused=True, training=training, reuse=tf.compat.v1.AUTO_REUSE, name=scope)
+        return tf.compat.v1.nn.relu(temp_conv)
 
 
 if(__name__ == "__main__"):
-    m = MiddleAndRPN(tf.placeholder(
-        tf.float32, [None, 10, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 128]))
+    m = MiddleAndRPN(tf.compat.v1.placeholder(
+        tf.compat.v1.float32, [None, 10, cfg.INPUT_HEIGHT, cfg.INPUT_WIDTH, 128]))
