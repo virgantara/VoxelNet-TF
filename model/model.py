@@ -9,7 +9,7 @@
 
 import sys
 import os
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
 import cv2
 from numba import jit
 
@@ -33,10 +33,10 @@ class RPN3D(object):
         # hyper parameters and status
         self.cls = cls
         self.single_batch_size = single_batch_size
-        self.learning_rate = tf.Variable(
-            float(learning_rate), trainable=False, dtype=tf.float32)
-        self.global_step = tf.Variable(1, trainable=False)
-        self.epoch = tf.Variable(0, trainable=False)
+        self.learning_rate = tf.compat.v1.Variable(
+            float(learning_rate), trainable=False, dtype=tf.compat.v1.float32)
+        self.global_step = tf.compat.v1.Variable(1, trainable=False)
+        self.epoch = tf.compat.v1.Variable(0, trainable=False)
         self.epoch_add_op = self.epoch.assign(self.epoch + 1)
         self.alpha = alpha
         self.beta = beta
@@ -63,7 +63,7 @@ class RPN3D(object):
         self.tower_grads = []
         with tf.compat.v1.variable_scope(tf.compat.v1.get_variable_scope()):
             for idx, dev in enumerate(self.avail_gpus):
-                with tf.device('/gpu:{}'.format(dev)), tf.compat.v1.name_scope('gpu_{}'.format(dev)):
+                with tf.compat.v1.device('/gpu:{}'.format(dev)), tf.compat.v1.name_scope('gpu_{}'.format(dev)):
                     # must use name scope here since we do not want to create new variables
                     # graph
                     feature = FeatureNet(
@@ -103,29 +103,29 @@ class RPN3D(object):
 
         # loss and optimizer
         # self.xxxloss is only the loss for the lowest tower
-        with tf.device('/gpu:{}'.format(self.avail_gpus[0])):
+        with tf.compat.v1.device('/gpu:{}'.format(self.avail_gpus[0])):
             self.grads = average_gradients(self.tower_grads)
             self.update = self.opt.apply_gradients(
                 zip(self.grads, self.params), global_step=self.global_step)
-            self.gradient_norm = tf.group(*self.gradient_norm)
+            self.gradient_norm = tf.compat.v1.group(*self.gradient_norm)
 
-        self.delta_output = tf.concat(self.delta_output, axis=0)
-        self.prob_output = tf.concat(self.prob_output, axis=0)
+        self.delta_output = tf.compat.v1.concat(self.delta_output, axis=0)
+        self.prob_output = tf.compat.v1.concat(self.prob_output, axis=0)
 
         self.anchors = cal_anchors()
         # for predict and image summary
         self.rgb = tf.compat.v1.placeholder(
-            tf.uint8, [None, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH, 3])
-        self.bv = tf.compat.v1.placeholder(tf.uint8, [
+            tf.compat.v1.uint8, [None, cfg.IMAGE_HEIGHT, cfg.IMAGE_WIDTH, 3])
+        self.bv = tf.compat.v1.placeholder(tf.compat.v1.uint8, [
                                  None, cfg.BV_LOG_FACTOR * cfg.INPUT_HEIGHT, cfg.BV_LOG_FACTOR * cfg.INPUT_WIDTH, 3])
-        self.bv_heatmap = tf.compat.v1.placeholder(tf.uint8, [
+        self.bv_heatmap = tf.compat.v1.placeholder(tf.compat.v1.uint8, [
             None, cfg.BV_LOG_FACTOR * cfg.FEATURE_HEIGHT, cfg.BV_LOG_FACTOR * cfg.FEATURE_WIDTH, 3])
-        self.boxes2d = tf.compat.v1.placeholder(tf.float32, [None, 4])
-        self.boxes2d_scores = tf.compat.v1.placeholder(tf.float32, [None])
+        self.boxes2d = tf.compat.v1.placeholder(tf.compat.v1.float32, [None, 4])
+        self.boxes2d_scores = tf.compat.v1.placeholder(tf.compat.v1.float32, [None])
 
         # NMS(2D)
-        with tf.device('/gpu:{}'.format(self.avail_gpus[0])):
-            self.box2d_ind_after_nms = tf.image.non_max_suppression(
+        with tf.compat.v1.device('/gpu:{}'.format(self.avail_gpus[0])):
+            self.box2d_ind_after_nms = tf.compat.v1.image.non_max_suppression(
                 self.boxes2d, self.boxes2d_scores, max_output_size=cfg.RPN_NMS_POST_TOPK, iou_threshold=cfg.RPN_NMS_THRESH)
 
         # summary and saver
@@ -342,14 +342,14 @@ def average_gradients(tower_grads):
         grads = []
         for g in grad_and_vars:
             # Add 0 dimension to the gradients to represent the tower.
-            expanded_g = tf.expand_dims(g, 0)
+            expanded_g = tf.compat.v1.expand_dims(g, 0)
 
             # Append on a 'tower' dimension which we will average over below.
             grads.append(expanded_g)
 
         # Average over the 'tower' dimension.
-        grad = tf.concat(axis=0, values=grads)
-        grad = tf.reduce_mean(grad, 0)
+        grad = tf.compat.v1.concat(axis=0, values=grads)
+        grad = tf.compat.v1.reduce_mean(grad, 0)
 
         # Keep in mind that the Variables are redundant because they are shared
         # across towers. So .. we will just return the first tower's pointer to

@@ -12,7 +12,7 @@ import argparse
 import os
 import time
 import sys
-import tensorflow.compat.v1 as tf
+import tensorflow as tf
 from itertools import count
 
 from config import cfg
@@ -40,24 +40,24 @@ os.makedirs(save_model_dir, exist_ok=True)
 
 def main(_):
     # TODO: split file support
-    with tf.Graph().as_default():
+    with tf.compat.v1.Graph().as_default():
         global save_model_dir
         with KittiLoader(object_dir=os.path.join(dataset_dir, 'training'), queue_size=50, require_shuffle=True,
                          is_testset=False, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT, aug=True) as train_loader, \
             KittiLoader(object_dir=os.path.join(dataset_dir, 'testing'), queue_size=50, require_shuffle=True,
                         is_testset=False, batch_size=args.single_batch_size * cfg.GPU_USE_COUNT, use_multi_process_num=8, multi_gpu_sum=cfg.GPU_USE_COUNT, aug=False) as valid_loader:
 
-            gpu_options = tf.GPUOptions(per_process_gpu_memory_fraction=cfg.GPU_MEMORY_FRACTION,
+            gpu_options = tf.compat.v1.compat.v1.GPUOptions(per_process_gpu_memory_fraction=cfg.GPU_MEMORY_FRACTION,
                                         visible_device_list=cfg.GPU_AVAILABLE,
                                         allow_growth=True)
-            config = tf.ConfigProto(
+            config = tf.compat.v1.ConfigProto(
                 gpu_options=gpu_options,
                 device_count={
                     "GPU": cfg.GPU_USE_COUNT,
                 },
                 allow_soft_placement=True,
             )
-            with tf.Session(config=config) as sess:
+            with tf.compat.v1.Session(config=config) as sess:
                 model = RPN3D(
                     cls=cfg.DETECT_OBJ,
                     single_batch_size=args.single_batch_size,
@@ -69,13 +69,13 @@ def main(_):
                     avail_gpus=cfg.GPU_AVAILABLE.split(',')
                 )
                 # param init/restore
-                if tf.train.get_checkpoint_state(save_model_dir):
+                if tf.compat.v1.train.get_checkpoint_state(save_model_dir):
                     print("Reading model parameters from %s" % save_model_dir)
                     model.saver.restore(
-                        sess, tf.train.latest_checkpoint(save_model_dir))
+                        sess, tf.compat.v1.train.latest_checkpoint(save_model_dir))
                 else:
                     print("Created model with fresh parameters.")
-                    tf.global_variables_initializer().run()
+                    tf.compat.v1.global_variables_initializer().run()
 
                 # train and validate
                 iter_per_epoch = int(
@@ -87,7 +87,7 @@ def main(_):
                 save_model_interval = int(iter_per_epoch / 3)
                 validate_interval = 60
 
-                summary_writer = tf.summary.FileWriter(log_dir, sess.graph)
+                summary_writer = tf.compat.v1.summary.FileWriter(log_dir, sess.graph)
                 while model.epoch.eval() < args.max_epoch:
                     is_summary, is_summary_image, is_validate = False, False, False
                     iter = model.global_step.eval()
@@ -141,4 +141,4 @@ def main(_):
 
 
 if __name__ == '__main__':
-    tf.app.run(main)
+    tf.compat.v1.app.run(main)
